@@ -560,9 +560,8 @@
     <div class="form-group">
       <label class="form-label" for="modelSelect">Model</label>
       <select class="form-select" id="modelSelect">
-        <option value="google/gemma-3-12b-it">Gemma 3 12B — best quality ✓</option>
-        <option value="google/gemma-3-4b-it">Gemma 3 4B — faster ✓</option>
-        <option value="google/gemma-3-1b-it">Gemma 3 1B — fastest ✓</option>
+        <option value="google/gemma-3-12b-it">Gemma 3 12B</option>
+        <option value="google/gemma-3-27b-it">Gemma 3 27B — higher quality</option>
       </select>
     </div>
 
@@ -600,10 +599,10 @@ async function testConnection() {
   result.textContent = '';
 
   try {
-    const res = await fetch('https://router.huggingface.co/hf-inference/models/google/gemma-3-1b-it/v1/chat/completions', {
+    const res = await fetch('https://router.huggingface.co/featherless-ai/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: 'google/gemma-3-1b-it', messages: [{ role: 'user', content: 'Say hi' }], max_tokens: 10 })
+      body: JSON.stringify({ model: 'google/gemma-3-12b-it', messages: [{ role: 'user', content: 'Say hi' }], max_tokens: 10 })
     });
     if (res.status === 200) {
       result.style.color = '#2dd4aa';
@@ -613,7 +612,7 @@ async function testConnection() {
       result.textContent = '✗ Invalid token. Re-copy it from huggingface.co/settings/tokens.';
     } else if (res.status === 403) {
       result.style.color = 'var(--danger)';
-      result.textContent = '✗ License not accepted. Visit huggingface.co/google/gemma-3-1b-it and click Accept.';
+      result.textContent = '✗ License not accepted. Visit huggingface.co/google/gemma-3-12b-it and click Accept.';
     } else {
       result.style.color = 'var(--danger)';
       result.textContent = `✗ Error ${res.status}. Try again in a moment.`;
@@ -687,7 +686,7 @@ async function runTranslation() {
   setOutput('Translating…', false);
 
   try {
-    const res = await fetch(`https://router.huggingface.co/hf-inference/models/${model}/v1/chat/completions`, {
+    const res = await fetch(`https://router.huggingface.co/featherless-ai/v1/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
