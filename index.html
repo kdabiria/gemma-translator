@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Gemma Translate">
+<meta name="theme-color" content="#0d0d12">
+<title>Gemma Live Translator</title>
+<link rel="manifest" href="#" id="manifest-placeholder">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0d12;
+    --surface: #16161f;
+    --surface2: #1e1e2a;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --teal: #2dd4aa;
+    --teal-dim: rgba(45,212,170,0.12);
+    --amber: #f5a623;
+    --amber-dim: rgba(245,166,35,0.12);
+    --text: #f0eff8;
+    --text-muted: #7a7a96;
+    --text-soft: #b0afc8;
+    --danger: #f06060;
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 0 0 env(safe-area-inset-bottom);
+  }
+
+  .header {
+    padding: 20px 20px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 34px;
+    height: 34px;
+    background: var(--teal);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .logo-icon svg { width: 18px; height: 18px; fill: #0d0d12; }
+
+  .logo-text {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    color: var(--text);
+  }
+
+  .logo-text span { color: var(--teal); }
+
+  .settings-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.15s;
+  }
+  .settings-btn:hover { border-color: var(--border2); color: var(--text); }
+  .settings-btn svg { width: 18px; height: 18px; }
+
+  .main { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+
+  .lang-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 6px;
+  }
+
+  .lang-select {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 6px 8px;
+    cursor: pointer;
+    appearance: none;
+    text-align: center;
+    outline: none;
+  }
+  .lang-select option { background: #1e1e2a; }
+
+  .swap-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--teal-dim);
+    border: 1px solid rgba(45,212,170,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--teal);
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .swap-btn:hover { background: rgba(45,212,170,0.2); }
+  .swap-btn svg { width: 16px; height: 16px; }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .panel-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 12px 16px 8px;
+  }
+
+  textarea {
+    background: transparent;
+    border: none;
+    resize: none;
+    color: var(--text);
+    font-size: 18px;
+    font-family: inherit;
+    line-height: 1.55;
+    padding: 0 16px 12px;
+    outline: none;
+    min-height: 120px;
+    width: 100%;
+  }
+  textarea::placeholder { color: var(--text-muted); }
+
+  .panel-footer {
+    border-top: 1px solid var(--border);
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .char-count {
+    font-size: 12px;
+    color: var(--text-muted);
+    min-width: 50px;
+  }
+
+  .mic-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .mic-btn.listening {
+    background: rgba(240,96,96,0.15);
+    border-color: var(--danger);
+    color: var(--danger);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  .mic-btn:hover { border-color: var(--teal); color: var(--teal); }
+  .mic-btn svg { width: 16px; height: 16px; }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(240,96,96,0.35); }
+    50% { box-shadow: 0 0 0 7px rgba(240,96,96,0); }
+  }
+
+  .clear-btn {
+    font-size: 12px;
+    color: var(--text-muted);
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: all 0.1s;
+  }
+  .clear-btn:hover { color: var(--text); background: var(--surface2); }
+
+  .translate-btn {
+    width: 100%;
+    padding: 15px;
+    background: var(--teal);
+    color: #0d0d12;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.15s;
+  }
+  .translate-btn:hover { background: #25c49d; }
+  .translate-btn:active { transform: scale(0.98); }
+  .translate-btn:disabled { background: var(--surface2); color: var(--text-muted); cursor: not-allowed; }
+  .translate-btn svg { width: 18px; height: 18px; }
+
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid rgba(13,13,18,0.3);
+    border-top-color: #0d0d12;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .output-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .output-text {
+    flex: 1;
+    font-size: 18px;
+    line-height: 1.55;
+    padding: 12px 16px;
+    color: var(--text-soft);
+  }
+
+  .output-text.has-content { color: var(--text); }
+  .output-text.error-text { color: var(--danger); font-size: 14px; }
+
+  .output-actions {
+    border-top: 1px solid var(--border);
+    padding: 10px 12px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .action-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .action-btn:hover { color: var(--teal); border-color: rgba(45,212,170,0.3); }
+  .action-btn svg { width: 13px; height: 13px; }
+
+  .model-badge {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--text-muted);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 3px 8px;
+    border-radius: 20px;
+  }
+
+  .settings-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    align-items: flex-end;
+  }
+  .settings-modal.open { display: flex; }
+
+  .settings-sheet {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    background: var(--surface);
+    border-radius: 20px 20px 0 0;
+    border: 1px solid var(--border);
+    border-bottom: none;
+    padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+    animation: slideUp 0.25s ease-out;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+
+  .sheet-handle {
+    width: 40px; height: 4px;
+    background: var(--border2);
+    border-radius: 2px;
+    margin: 0 auto 20px;
+  }
+
+  .sheet-title {
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 20px;
+  }
+
+  .form-group { margin-bottom: 16px; }
+
+  .form-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .form-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 14px;
+    padding: 10px 12px;
+    outline: none;
+    font-family: 'SF Mono', monospace;
+    transition: border-color 0.15s;
+  }
+  .form-input:focus { border-color: var(--teal); }
+  .form-input::placeholder { color: var(--text-muted); font-family: inherit; }
+
+  .form-select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 14px;
+    padding: 10px 12px;
+    outline: none;
+    appearance: none;
+    cursor: pointer;
+  }
+
+  .save-btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--teal);
+    color: #0d0d12;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: all 0.15s;
+  }
+  .save-btn:hover { background: #25c49d; }
+
+  .hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-top: 6px;
+  }
+  .hint a { color: var(--teal); text-decoration: none; }
+
+  .status-bar {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 0 20px 16px;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: calc(90px + env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--text);
+    color: var(--bg);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0;
+    transition: all 0.2s;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 200;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>
+    </div>
+    <span class="logo-text">Gemma <span>Translate</span></span>
+  </div>
+  <button class="settings-btn" onclick="openSettings()" aria-label="Settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </button>
+</div>
+
+<div class="main">
+  <div class="lang-bar">
+    <select class="lang-select" id="fromLang">
+      <option value="auto">Detect language</option>
+      <option value="English">English</option>
+      <option value="Spanish">Spanish</option>
+      <option value="French">French</option>
+      <option value="German">German</option>
+      <option value="Italian">Italian</option>
+      <option value="Portuguese">Portuguese</option>
+      <option value="Japanese">Japanese</option>
+      <option value="Korean">Korean</option>
+      <option value="Chinese">Chinese</option>
+      <option value="Arabic">Arabic</option>
+      <option value="Hindi">Hindi</option>
+      <option value="Russian">Russian</option>
+      <option value="Dutch">Dutch</option>
+      <option value="Polish">Polish</option>
+      <option value="Turkish">Turkish</option>
+    </select>
+
+    <button class="swap-btn" onclick="swapLanguages()" aria-label="Swap languages">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
+    </button>
+
+    <select class="lang-select" id="toLang">
+      <option value="Spanish">Spanish</option>
+      <option value="English">English</option>
+      <option value="French">French</option>
+      <option value="German">German</option>
+      <option value="Italian">Italian</option>
+      <option value="Portuguese">Portuguese</option>
+      <option value="Japanese">Japanese</option>
+      <option value="Korean">Korean</option>
+      <option value="Chinese">Chinese</option>
+      <option value="Arabic">Arabic</option>
+      <option value="Hindi">Hindi</option>
+      <option value="Russian">Russian</option>
+      <option value="Dutch">Dutch</option>
+      <option value="Polish">Polish</option>
+      <option value="Turkish">Turkish</option>
+    </select>
+  </div>
+
+  <div class="panel">
+    <div class="panel-label">Source text</div>
+    <textarea id="sourceText" placeholder="Type or speak something…" maxlength="1000" oninput="updateCharCount()"></textarea>
+    <div class="panel-footer">
+      <span class="char-count" id="charCount">0 / 1000</span>
+      <button class="mic-btn" id="micBtn" onclick="toggleMic()" title="Voice input">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      </button>
+      <button class="clear-btn" onclick="clearSource()">Clear</button>
+    </div>
+  </div>
+
+  <button class="translate-btn" id="translateBtn" onclick="runTranslation()">
+    <svg id="btnIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 8l6 6"/><path d="M4 14l6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="M22 22l-5-10-5 10"/><path d="M14 18h6"/></svg>
+    <div class="spinner" id="spinner"></div>
+    <span id="btnText">Translate</span>
+  </button>
+
+  <div class="output-panel">
+    <div class="panel-label">Translation</div>
+    <div class="output-text" id="outputText">Translation will appear here…</div>
+    <div class="output-actions">
+      <button class="action-btn" onclick="copyTranslation()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy
+      </button>
+      <button class="action-btn" onclick="speakTranslation()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        Speak
+      </button>
+      <span class="model-badge" id="modelBadge">gemma-3-12b</span>
+    </div>
+  </div>
+</div>
+
+<div class="status-bar" id="statusBar">
+  ⚙️ Add your Hugging Face API key in Settings to start
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="settings-modal" id="settingsModal" onclick="closeSettingsOutside(event)">
+  <div class="settings-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Settings</div>
+
+    <div class="form-group">
+      <label class="form-label" for="apiKey">Hugging Face API Token</label>
+      <input class="form-input" type="password" id="apiKey" placeholder="hf_xxxxxxxxxxxxxxxx" autocomplete="off">
+      <p class="hint">Get a free token at <a href="https://huggingface.co/settings/tokens" target="_blank">huggingface.co/settings/tokens</a> — read access is enough.</p>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="modelSelect">Model</label>
+      <select class="form-select" id="modelSelect">
+        <option value="google/gemma-3-12b-it">Gemma 3 12B — best quality ✓</option>
+        <option value="google/gemma-3-4b-it">Gemma 3 4B — faster ✓</option>
+        <option value="google/gemma-3-1b-it">Gemma 3 1B — fastest ✓</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="maxTokens">Max output tokens</label>
+      <select class="form-select" id="maxTokens">
+        <option value="150">150 — short phrases</option>
+        <option value="300" selected>300 — default</option>
+        <option value="500">500 — long text</option>
+      </select>
+    </div>
+
+    <button class="save-btn" onclick="saveSettings()">Save settings</button>
+    <button class="save-btn" id="testBtn" onclick="testConnection()" style="margin-top:8px;background:var(--surface2);color:var(--text);border:1px solid var(--border2)">Test connection</button>
+    <p class="hint" id="testResult" style="margin-top:10px;min-height:16px;color:var(--text-muted);"></p>
+    <p class="hint" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+      ⚠️ File must be <b>hosted</b> on a server — not opened locally.<br>
+      Quick option: drag to <a href="https://tiiny.host" target="_blank">tiiny.host</a>
+    </p>
+  </div>
+</div>
+
+<script>
+let apiKey = '', model = 'google/gemma-3-12b-it', maxTok = 300;
+let recognition = null, isListening = false;
+
+async function testConnection() {
+  const key = document.getElementById('apiKey').value.trim();
+  const result = document.getElementById('testResult');
+  const btn = document.getElementById('testBtn');
+  if (!key) { result.textContent = '⚠️ Enter your token first.'; return; }
+
+  btn.textContent = 'Testing…';
+  btn.disabled = true;
+  result.textContent = '';
+
+  try {
+    const res = await fetch('https://router.huggingface.co/hf-inference/models/google/gemma-3-1b-it/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ model: 'google/gemma-3-1b-it', messages: [{ role: 'user', content: 'Say hi' }], max_tokens: 10 })
+    });
+    if (res.status === 200) {
+      result.style.color = '#2dd4aa';
+      result.textContent = '✓ Token works! Connection successful.';
+    } else if (res.status === 401) {
+      result.style.color = 'var(--danger)';
+      result.textContent = '✗ Invalid token. Re-copy it from huggingface.co/settings/tokens.';
+    } else if (res.status === 403) {
+      result.style.color = 'var(--danger)';
+      result.textContent = '✗ License not accepted. Visit huggingface.co/google/gemma-3-1b-it and click Accept.';
+    } else {
+      result.style.color = 'var(--danger)';
+      result.textContent = `✗ Error ${res.status}. Try again in a moment.`;
+    }
+  } catch (e) {
+    result.style.color = 'var(--danger)';
+    result.textContent = '✗ Network error — this file must be hosted, not opened locally. Try tiiny.host.';
+  }
+
+  btn.textContent = 'Test connection';
+  btn.disabled = false;
+}
+
+function loadSettings() {
+  const s = sessionStorage.getItem('gemma-settings');
+  if (s) {
+    const p = JSON.parse(s);
+    apiKey = p.key || '';
+    model = p.model || model;
+    maxTok = p.tokens || maxTok;
+    document.getElementById('apiKey').value = apiKey;
+    document.getElementById('modelSelect').value = model;
+    document.getElementById('maxTokens').value = maxTok;
+    updateModelBadge();
+    if (apiKey) updateStatus('Ready to translate');
+  }
+}
+
+function saveSettings() {
+  apiKey = document.getElementById('apiKey').value.trim();
+  model = document.getElementById('modelSelect').value;
+  maxTok = parseInt(document.getElementById('maxTokens').value);
+  sessionStorage.setItem('gemma-settings', JSON.stringify({ key: apiKey, model, tokens: maxTok }));
+  updateModelBadge();
+  closeSettings();
+  updateStatus(apiKey ? 'Ready to translate' : '⚙️ Add your Hugging Face API key in Settings to start');
+  showToast('Settings saved');
+}
+
+function updateModelBadge() {
+  const m = model.split('/')[1] || model;
+  document.getElementById('modelBadge').textContent = m;
+}
+
+function updateCharCount() {
+  const v = document.getElementById('sourceText').value;
+  document.getElementById('charCount').textContent = v.length + ' / 1000';
+}
+
+function clearSource() {
+  document.getElementById('sourceText').value = '';
+  updateCharCount();
+}
+
+function updateStatus(msg) {
+  document.getElementById('statusBar').textContent = msg;
+}
+
+async function runTranslation() {
+  const text = document.getElementById('sourceText').value.trim();
+  if (!text) { showToast('Enter text to translate'); return; }
+  if (!apiKey) { openSettings(); return; }
+
+  const from = document.getElementById('fromLang').value;
+  const to = document.getElementById('toLang').value;
+  const fromLabel = from === 'auto' ? 'the original language' : from;
+
+  const prompt = `You are a professional translator. Translate the following text from ${fromLabel} to ${to}. Output ONLY the translated text, no explanations, no quotes, no labels.\n\nText: ${text}\n\nTranslation:`;
+
+  setLoading(true);
+  setOutput('Translating…', false);
+
+  try {
+    const res = await fetch(`https://router.huggingface.co/hf-inference/models/${model}/v1/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [
+          { role: 'system', content: 'You are a professional translator. Output ONLY the translated text, nothing else.' },
+          { role: 'user', content: `Translate from ${fromLabel} to ${to}: ${text}` }
+        ],
+        max_tokens: maxTok,
+        temperature: 0.3
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      if (res.status === 401) throw new Error('Invalid API token — check Settings.');
+      if (res.status === 403) throw new Error('Model access denied. Visit huggingface.co/google/gemma-3-12b-it and click Accept license.');
+      if (res.status === 422) throw new Error('Model not available on free Inference API. Switch to Gemma 3 in Settings.');
+      if (res.status === 503) throw new Error('Model is loading — wait 20 seconds and try again.');
+      if (res.status === 429) throw new Error('Rate limit hit — wait a moment and try again.');
+      throw new Error(err.error?.message || err.error || `API error ${res.status}`);
+    }
+
+    const data = await res.json();
+    let result = data?.choices?.[0]?.message?.content?.trim() || '';
+    if (!result) throw new Error('Empty response from model');
+    setOutput(result, true);
+    updateStatus(`Translated · ${model.split('/')[1]}`);
+  } catch (e) {
+    if (e.name === 'TypeError' && e.message.includes('fetch')) {
+      setOutput('Network error — check your internet connection and that the site is hosted (not opened as a local file).', false, true);
+    } else {
+      setOutput(e.message, false, true);
+    }
+    updateStatus('Translation failed');
+  }
+
+  setLoading(false);
+}
+
+function setLoading(on) {
+  const btn = document.getElementById('translateBtn');
+  const spinner = document.getElementById('spinner');
+  const icon = document.getElementById('btnIcon');
+  const txt = document.getElementById('btnText');
+  btn.disabled = on;
+  spinner.style.display = on ? 'block' : 'none';
+  icon.style.display = on ? 'none' : 'block';
+  txt.textContent = on ? 'Translating…' : 'Translate';
+}
+
+function setOutput(text, hasContent, isError) {
+  const el = document.getElementById('outputText');
+  el.textContent = text;
+  el.className = 'output-text' + (hasContent ? ' has-content' : '') + (isError ? ' error-text' : '');
+}
+
+function copyTranslation() {
+  const text = document.getElementById('outputText').textContent;
+  if (!text || text === 'Translation will appear here…') return;
+  navigator.clipboard.writeText(text).then(() => showToast('Copied!'));
+}
+
+function speakTranslation() {
+  const text = document.getElementById('outputText').textContent;
+  if (!text || text === 'Translation will appear here…') return;
+  const toLang = document.getElementById('toLang').value;
+  const langCodes = { Spanish:'es-ES', French:'fr-FR', German:'de-DE', Italian:'it-IT',
+    Portuguese:'pt-PT', Japanese:'ja-JP', Korean:'ko-KR', Chinese:'zh-CN',
+    Arabic:'ar-SA', Hindi:'hi-IN', Russian:'ru-RU', Dutch:'nl-NL',
+    Polish:'pl-PL', Turkish:'tr-TR', English:'en-US' };
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = langCodes[toLang] || 'en-US';
+  speechSynthesis.speak(u);
+}
+
+function swapLanguages() {
+  const f = document.getElementById('fromLang');
+  const t = document.getElementById('toLang');
+  if (f.value === 'auto') { showToast('Detect language cannot be swapped'); return; }
+  const fv = f.value, tv = t.value;
+  f.value = tv;
+  t.value = fv;
+
+  const outText = document.getElementById('outputText');
+  const srcText = document.getElementById('sourceText');
+  if (outText.classList.contains('has-content')) {
+    srcText.value = outText.textContent;
+    setOutput('', false);
+    updateCharCount();
+  }
+}
+
+function toggleMic() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    showToast('Speech input not supported in this browser'); return;
+  }
+  if (isListening) { recognition.stop(); return; }
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+  const fromLang = document.getElementById('fromLang').value;
+  const langCodes = { English:'en-US', Spanish:'es-ES', French:'fr-FR', German:'de-DE',
+    Italian:'it-IT', Portuguese:'pt-PT', Japanese:'ja-JP', Korean:'ko-KR',
+    Chinese:'zh-CN', Arabic:'ar-SA', Hindi:'hi-IN', Russian:'ru-RU',
+    Dutch:'nl-NL', Polish:'pl-PL', Turkish:'tr-TR' };
+  recognition.lang = langCodes[fromLang] || 'en-US';
+  recognition.continuous = false;
+  recognition.interimResults = true;
+
+  recognition.onstart = () => {
+    isListening = true;
+    document.getElementById('micBtn').classList.add('listening');
+    updateStatus('Listening…');
+  };
+
+  recognition.onresult = (e) => {
+    const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
+    document.getElementById('sourceText').value = transcript;
+    updateCharCount();
+  };
+
+  recognition.onend = () => {
+    isListening = false;
+    document.getElementById('micBtn').classList.remove('listening');
+    updateStatus(apiKey ? 'Ready to translate' : '⚙️ Add your Hugging Face API key in Settings to start');
+    const text = document.getElementById('sourceText').value.trim();
+    if (text && apiKey) runTranslation();
+  };
+
+  recognition.onerror = (e) => {
+    showToast('Mic error: ' + e.error);
+    isListening = false;
+    document.getElementById('micBtn').classList.remove('listening');
+  };
+
+  recognition.start();
+}
+
+function openSettings() { document.getElementById('settingsModal').classList.add('open'); }
+function closeSettings() { document.getElementById('settingsModal').classList.remove('open'); }
+function closeSettingsOutside(e) { if (e.target === document.getElementById('settingsModal')) closeSettings(); }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+document.getElementById('sourceText').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); runTranslation(); }
+});
+
+loadSettings();
+
+if ('serviceWorker' in navigator) {
+  const sw = `
+    self.addEventListener('install', e => self.skipWaiting());
+    self.addEventListener('activate', e => clients.claim());
+    self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => new Response('offline'))));
+  `;
+  const blob = new Blob([sw], { type: 'application/javascript' });
+  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+}
+</script>
+</body>
+</html>
