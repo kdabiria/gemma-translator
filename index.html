@@ -574,6 +574,32 @@
       </select>
     </div>
 
+    <div class="form-group" id="voicePickerGroup">
+      <label class="form-label" for="voiceLang">Voice language</label>
+      <select class="form-select" id="voiceLang" onchange="populateVoicePicker()">
+        <option value="Spanish">Spanish</option>
+        <option value="English">English</option>
+        <option value="French">French</option>
+        <option value="German">German</option>
+        <option value="Italian">Italian</option>
+        <option value="Portuguese">Portuguese</option>
+        <option value="Japanese">Japanese</option>
+        <option value="Korean">Korean</option>
+        <option value="Chinese">Chinese</option>
+        <option value="Arabic">Arabic</option>
+        <option value="Hindi">Hindi</option>
+        <option value="Russian">Russian</option>
+        <option value="Dutch">Dutch</option>
+        <option value="Polish">Polish</option>
+        <option value="Turkish">Turkish</option>
+      </select>
+      <label class="form-label" style="margin-top:10px" for="voicePicker">Voice</label>
+      <select class="form-select" id="voicePicker">
+        <option>Loading voices…</option>
+      </select>
+      <p class="hint">★ = cloud voice (best quality). Voices vary by browser / OS.</p>
+    </div>
+
     <button class="save-btn" onclick="saveSettings()">Save settings</button>
     <button class="save-btn" id="testBtn" onclick="testConnection()" style="margin-top:8px;background:var(--surface2);color:var(--text);border:1px solid var(--border2)">Test connection</button>
     <p class="hint" id="testResult" style="margin-top:10px;min-height:16px;color:var(--text-muted);"></p>
@@ -587,6 +613,14 @@
 <script>
 let apiKey = '', model = 'google/gemma-3-12b-it', maxTok = 300;
 let recognition = null, isListening = false;
+let voicePrefs = {};
+
+const langCodes = {
+  Spanish:'es-ES', French:'fr-FR', German:'de-DE', Italian:'it-IT',
+  Portuguese:'pt-PT', Japanese:'ja-JP', Korean:'ko-KR', Chinese:'zh-CN',
+  Arabic:'ar-SA', Hindi:'hi-IN', Russian:'ru-RU', Dutch:'nl-NL',
+  Polish:'pl-PL', Turkish:'tr-TR', English:'en-US'
+};
 
 async function testConnection() {
   const key = document.getElementById('apiKey').value.trim();
@@ -633,6 +667,7 @@ function loadSettings() {
     apiKey = p.key || '';
     model = p.model || model;
     maxTok = p.tokens || maxTok;
+    voicePrefs = p.voicePrefs || {};
     document.getElementById('apiKey').value = apiKey;
     document.getElementById('modelSelect').value = model;
     document.getElementById('maxTokens').value = maxTok;
@@ -645,7 +680,16 @@ function saveSettings() {
   apiKey = document.getElementById('apiKey').value.trim();
   model = document.getElementById('modelSelect').value;
   maxTok = parseInt(document.getElementById('maxTokens').value);
-  sessionStorage.setItem('gemma-settings', JSON.stringify({ key: apiKey, model, tokens: maxTok }));
+  const voiceLangEl = document.getElementById('voiceLang');
+  const voicePickerEl = document.getElementById('voicePicker');
+  if (voiceLangEl && voicePickerEl) {
+    const voiceURI = voicePickerEl.value;
+    const voices = speechSynthesis.getVoices();
+    if (voiceURI && voices.find(v => v.voiceURI === voiceURI)) {
+      voicePrefs[voiceLangEl.value] = voiceURI;
+    }
+  }
+  sessionStorage.setItem('gemma-settings', JSON.stringify({ key: apiKey, model, tokens: maxTok, voicePrefs }));
   updateModelBadge();
   closeSettings();
   updateStatus(apiKey ? 'Ready to translate' : '⚙️ Add your Hugging Face API key in Settings to start');
@@ -757,13 +801,63 @@ function speakTranslation() {
   const text = document.getElementById('outputText').textContent;
   if (!text || text === 'Translation will appear here…') return;
   const toLang = document.getElementById('toLang').value;
-  const langCodes = { Spanish:'es-ES', French:'fr-FR', German:'de-DE', Italian:'it-IT',
-    Portuguese:'pt-PT', Japanese:'ja-JP', Korean:'ko-KR', Chinese:'zh-CN',
-    Arabic:'ar-SA', Hindi:'hi-IN', Russian:'ru-RU', Dutch:'nl-NL',
-    Polish:'pl-PL', Turkish:'tr-TR', English:'en-US' };
   const u = new SpeechSynthesisUtterance(text);
   u.lang = langCodes[toLang] || 'en-US';
+  const voice = getBestVoice(toLang, u.lang);
+  if (voice) u.voice = voice;
   speechSynthesis.speak(u);
+}
+
+function getBestVoice(langName, langCode) {
+  const voices = speechSynthesis.getVoices();
+  const prefix = langCode.split('-')[0];
+  const matching = voices.filter(v => v.lang === langCode || v.lang.startsWith(prefix + '-'));
+  if (!matching.length) return undefined;
+  const pref = voicePrefs[langName];
+  if (pref) {
+    const found = matching.find(v => v.voiceURI === pref);
+    if (found) return found;
+  }
+  const cloud = matching.find(v => v.localService === false);
+  if (cloud) return cloud;
+  const def = matching.find(v => v.default);
+  if (def) return def;
+  return matching[0];
+}
+
+function populateVoicePicker() {
+  const picker = document.getElementById('voicePicker');
+  if (!picker) return;
+  const langName = document.getElementById('voiceLang').value;
+  const langCode = langCodes[langName] || 'en-US';
+  const prefix = langCode.split('-')[0];
+  const voices = speechSynthesis.getVoices();
+  const matching = voices.filter(v => v.lang === langCode || v.lang.startsWith(prefix + '-'));
+  picker.innerHTML = '';
+  if (!voices.length) {
+    picker.innerHTML = '<option>Loading voices…</option>';
+    return;
+  }
+  if (!matching.length) {
+    const opt = document.createElement('option');
+    opt.textContent = `No voices installed for ${langName}`;
+    picker.appendChild(opt);
+    return;
+  }
+  const pref = voicePrefs[langName];
+  matching.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v.voiceURI;
+    const badge = v.localService === false ? ' ★' : '';
+    opt.textContent = `${v.name} (${v.lang})${badge}`;
+    picker.appendChild(opt);
+  });
+  if (pref && matching.find(v => v.voiceURI === pref)) {
+    picker.value = pref;
+  } else {
+    const best = getBestVoice(langName, langCode);
+    if (best) picker.value = best.voiceURI;
+  }
 }
 
 function swapLanguages() {
@@ -792,10 +886,6 @@ function toggleMic() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   recognition = new SpeechRecognition();
   const fromLang = document.getElementById('fromLang').value;
-  const langCodes = { English:'en-US', Spanish:'es-ES', French:'fr-FR', German:'de-DE',
-    Italian:'it-IT', Portuguese:'pt-PT', Japanese:'ja-JP', Korean:'ko-KR',
-    Chinese:'zh-CN', Arabic:'ar-SA', Hindi:'hi-IN', Russian:'ru-RU',
-    Dutch:'nl-NL', Polish:'pl-PL', Turkish:'tr-TR' };
   recognition.lang = langCodes[fromLang] || 'en-US';
   recognition.continuous = false;
   recognition.interimResults = true;
@@ -829,7 +919,12 @@ function toggleMic() {
   recognition.start();
 }
 
-function openSettings() { document.getElementById('settingsModal').classList.add('open'); }
+function openSettings() {
+  document.getElementById('settingsModal').classList.add('open');
+  const voiceLang = document.getElementById('voiceLang');
+  if (voiceLang) voiceLang.value = document.getElementById('toLang').value;
+  populateVoicePicker();
+}
 function closeSettings() { document.getElementById('settingsModal').classList.remove('open'); }
 function closeSettingsOutside(e) { if (e.target === document.getElementById('settingsModal')) closeSettings(); }
 
@@ -845,6 +940,14 @@ document.getElementById('sourceText').addEventListener('keydown', (e) => {
 });
 
 loadSettings();
+
+if ('speechSynthesis' in window) {
+  speechSynthesis.onvoiceschanged = populateVoicePicker;
+  if (typeof speechSynthesis.getVoices !== 'function') {
+    const g = document.getElementById('voicePickerGroup');
+    if (g) g.style.display = 'none';
+  }
+}
 
 if ('serviceWorker' in navigator) {
   const sw = `
